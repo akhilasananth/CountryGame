@@ -1,5 +1,5 @@
 from pathlib import Path
-
+from countrygame.constants import FORBIDDEN_SEPARATORS
 import pytest
 
 
@@ -35,6 +35,5 @@ def test_countries_are_newline_separated(countries_file):
     lines = content.splitlines()
     assert len(lines) > 1, "Countries must be listed on separate lines"
 
-    forbidden_separators = [",", "|", ";", "\t"]
-    for sep in forbidden_separators:
+    for sep in FORBIDDEN_SEPARATORS:
         assert sep not in content, f"Countries must not be '{sep}' separated"
