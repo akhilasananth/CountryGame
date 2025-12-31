@@ -67,8 +67,8 @@ def test_is_valid_country():
     game = CountryChainGame()
     game.all_countries = {"italy", "france"}
 
-    assert game.is_valid_country("italy")
-    assert not game.is_valid_country("germany")
+    assert game._is_valid_country("italy")
+    assert not game._is_valid_country("germany")
 
 
 def test_validate_and_remove_country_valid():
@@ -164,14 +164,14 @@ def test_get_computer_response_missing_input():
 def test_play_get_player_input(setup_game, mocker):
     game, mock_print = setup_game
     mocker.patch("builtins.input", side_effect=["", "india"])
-    result = game.play_get_player_input()
+    result = game._get_player_input()
     mock_print.assert_any_call("Input cannot be empty. 🗑️")
     assert result == "india"
 
 
 def test_play_handle_player_move_lose(setup_game):
     game, mock_print = setup_game
-    result = game.play_handle_player_move("ireland", "d")
+    result = game._handle_player_move("ireland", "d")
 
     mock_print.assert_any_call(
         "❌This country was already said or it has the wrong first letter. You Lose! 😢"
@@ -181,7 +181,7 @@ def test_play_handle_player_move_lose(setup_game):
 
 def test_play_handle_player_move_retry(setup_game):
     game, mock_print = setup_game
-    result = game.play_handle_player_move("sdfsfds", "i")
+    result = game._handle_player_move("sdfsfds", "i")
 
     mock_print.assert_any_call("⚠️Invalid country, please try again! 🙃")
     assert result == PlayerStatus.RETRY
@@ -189,7 +189,7 @@ def test_play_handle_player_move_retry(setup_game):
 
 def test_play_handle_player_move_quit(setup_game):
     game, mock_print = setup_game
-    result = game.play_handle_player_move("quit", "i")
+    result = game._handle_player_move("quit", "i")
 
     mock_print.assert_any_call("🪦 Bye! Game ended.")
     assert result == PlayerStatus.QUIT
@@ -201,7 +201,7 @@ def test_play_handle_player_move_continue(setup_game):
     game.unseen_countries = {
         "i": {"italy", "ireland"},
     }
-    result = game.play_handle_player_move("italy", "i")
+    result = game._handle_player_move("italy", "i")
 
     mock_print.assert_any_call("✅ Accepted! Last letter is y")
     assert result == PlayerStatus.CONTINUE
@@ -214,7 +214,7 @@ def test_play_handle_computer_move_empty_set(setup_game):
         "i": {},
     }
 
-    result = game.play_handle_computer_move("Brunei")
+    result = game._handle_computer_move("Brunei")
     mock_print.assert_any_call(
         "No more countries that start with the letter: i 😢. You win! 😃🎉"
     )
@@ -228,7 +228,7 @@ def test_play_handle_computer_move_empty_player_input(setup_game):
         "i": {"italy"},
     }
 
-    result = game.play_handle_computer_move("")
+    result = game._handle_computer_move("")
     mock_print.assert_any_call("Cannot respond to empty player response")
     assert result == ComputerMoveResult(PlayerStatus.RETRY, None)
 
@@ -240,7 +240,7 @@ def test_play_handle_computer_move_valid(setup_game):
         "i": {"italy"},
     }
 
-    result = game.play_handle_computer_move("Brunei")
+    result = game._handle_computer_move("Brunei")
     mock_print.assert_any_call("> 🤖Computer: italy")
     assert result == ComputerMoveResult(PlayerStatus.CONTINUE, "y")
 
@@ -250,7 +250,7 @@ def test_play_invalid_countries_printed(setup_game):
     game.all_countries = {"india"}
     game.invalid_countries = {"USA,Canada", "France|Spain", "Germany;Uruguay"}
 
-    game.print_welcome_message()
+    game._print_welcome_message()
 
     mock_print.assert_any_call(
         f"The following invalid countries were not counted: {game.invalid_countries}"
@@ -281,7 +281,7 @@ def test_reset_all_rebuilds_unseen_countries(setup_game):
     game.all_countries = {"india", "italy", "germany"}
     game.unseen_countries = {"i": {"italy"}}
 
-    game.reset_all()
+    game._reset_all()
 
     expected = {
         "i": {"india", "italy"},
