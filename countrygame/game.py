@@ -113,7 +113,7 @@ class CountryChainGame:
 
     def _print_welcome_message(self) -> None:
         print(
-            """ Welcome to the Country Chain Game! 👋🏼
+            f""" Welcome to the Country Chain Game! 👋🏼
             Rules:
             - Enter a country starting with the last letter of the previous country.
             - No repeats allowed. Repeating a country = you lose.
@@ -121,7 +121,7 @@ class CountryChainGame:
             - To Quit, type: 'quit'
             - To Restart the game, type: 'restart'
             - You go first. 
-            - Please note that the game quits after 3 empty inputs
+            - Please note that the game quits after {MAX_EMPTY_INPUTS} empty inputs
                 """
         )
 
