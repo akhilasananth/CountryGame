@@ -2,7 +2,9 @@ import random
 from collections import defaultdict
 from pathlib import Path
 
-from countrygame.constants import FORBIDDEN_SEPARATORS, ComputerMoveResult, PlayerStatus
+from countrygame.constants import (
+    FORBIDDEN_SEPARATORS, ComputerMoveResult, PlayerStatus, MAX_EMPTY_INPUTS
+)
 from countrygame.utils import clear_console, get_path
 
 
@@ -19,11 +21,11 @@ class CountryChainGame:
         self.invalid_countries = (
             set()
         )  # to show what countries were not added to all_countries from the file
-        self._load_countries(get_path(countries_file_path_str))
+        self._load_all_countries(get_path(countries_file_path_str))
 
     # HELPERS
 
-    def _load_countries(self, countries_file_path: Path) -> None:
+    def _load_all_countries(self, countries_file_path: Path) -> None:
         try:
             with open(countries_file_path, "r") as f:
                 for line in f:
@@ -51,18 +53,25 @@ class CountryChainGame:
     def _is_valid_country(self, country: str) -> bool:
         return country in self.all_countries
 
-    def _reset_all(self):
+    def _reset_all(self) -> None:
         self.unseen_countries = defaultdict(set)
         for country in self.all_countries:
             self.unseen_countries[country[0]].add(country)
 
-    def _get_player_input(self):
-        while True:
+    # PRINTING HELPERS
+
+    def _get_player_input(self) -> str | None:
+        empty_attempts = MAX_EMPTY_INPUTS
+        while empty_attempts != 0:
             player_input = input("> 🧑‍🎤Input country: ").strip().lower()
             if not player_input:
                 print("Input cannot be empty. 🗑️")
+                empty_attempts -= 1
             else:
                 return player_input
+
+        print("🪦 Max empty inputs - 3 reached 😢")
+        return None
 
     def _handle_player_move(
         self, player_input: str, computer_last_letter: str
@@ -102,7 +111,7 @@ class CountryChainGame:
                 PlayerStatus.CONTINUE, computer_response[-1].lower()
             )
 
-    def _print_welcome_message(self):
+    def _print_welcome_message(self) -> None:
         print(
             """ Welcome to the Country Chain Game! 👋🏼
             Rules:
@@ -111,7 +120,8 @@ class CountryChainGame:
             - Also responding with a country with the wrong first letter = you lose.
             - To Quit, type: 'quit'
             - To Restart the game, type: 'restart'
-            - You go first.
+            - You go first. 
+            - Please note that the game quits after 3 empty inputs
                 """
         )
 
@@ -178,6 +188,9 @@ class CountryChainGame:
         while True:
             player_input = self._get_player_input()
 
+            if not player_input:
+                return PlayerStatus.QUIT
+
             if player_input == "restart":
                 self._reset_all()
                 clear_console()
@@ -196,7 +209,7 @@ class CountryChainGame:
             if computer_last_letter is None:
                 return computer_response.status
 
-    def play(self):
+    def play(self) -> None:
         while True:
             if self.run_game() != PlayerStatus.RESTART:
                 break

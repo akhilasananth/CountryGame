@@ -3,7 +3,7 @@ from unittest.mock import mock_open, patch
 
 import pytest
 
-from countrygame.constants import NUMBER_OF_NEW_LINES, ComputerMoveResult, PlayerStatus
+from countrygame.constants import NUMBER_OF_NEW_LINES, ComputerMoveResult, PlayerStatus, MAX_EMPTY_INPUTS
 from countrygame.game import CountryChainGame
 
 
@@ -70,6 +70,15 @@ def test_is_valid_country():
     assert game._is_valid_country("italy")
     assert not game._is_valid_country("germany")
 
+
+def test_max_empty_inputs(setup_game, mocker):
+    game, mock_print = setup_game
+    empty_inputs = ["" for _ in range(MAX_EMPTY_INPUTS)]
+    mocker.patch("builtins.input", side_effect=empty_inputs)
+    result = game._get_player_input()
+
+    assert result is None
+    mock_print.assert_any_call("🪦 Max empty inputs - 3 reached 😢")
 
 def test_validate_and_remove_country_valid():
     game = CountryChainGame()
