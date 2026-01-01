@@ -136,7 +136,7 @@ class CountryChainGame:
         self, player_input: str, computer_last_letter: str
     ) -> PlayerStatus:
         if not player_input:
-            return PlayerStatus.RETRY
+            return PlayerStatus.QUIT
 
         if player_input == "quit":
             return PlayerStatus.QUIT
@@ -187,9 +187,6 @@ class CountryChainGame:
 
         while True:
             player_input = self._get_player_input()
-
-            if not player_input:
-                return PlayerStatus.QUIT
 
             if player_input == "restart":
                 self._reset_all()
