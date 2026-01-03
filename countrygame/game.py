@@ -179,7 +179,7 @@ class CountryChainGame:
                 - Repeat a country. 🔁
                 - Enter a country that starts with the wrong letter. ❌
                 - If there are no other countries left starting with a letter
-            - You get {MAX_INVALID_INPUTS} continuous invalid inputs:
+            - You get {MAX_INVALID_INPUTS} consecutive invalid inputs:
                 - Empty input. 🗑️
                 - An entry that is not a country. 🌎
             - 🌟WIN: Computer automatically loses if there are no other countries left starting with a letter.
