@@ -146,7 +146,7 @@ class CountryChainGame:
 
     def _get_computer_move(self, last_player_letter: str) -> MoveResult:
         """
-        Decide and perform the computer's move.
+        Decide and perform the computer's move based on the input last letter.
         Returns a MoveResult(status, last_letter).
         """
         if not last_player_letter:
@@ -168,6 +168,10 @@ class CountryChainGame:
         return MoveResult(PlayerStatus.CONTINUE, computer_choice[-1].lower())
 
     def _print_welcome_message(self) -> None:
+        """
+        This just holds the game rules, it's separated to make the play function look less busy
+        :return: Nothing
+        """
         print(
             f""" Welcome to the Country Chain Game! 👋🏼
             Rules:
@@ -192,6 +196,10 @@ class CountryChainGame:
             )
 
     def play(self) -> None:
+        """
+        Main play function
+        :return: Nothing
+        """
         self._print_welcome_message()
         last_letter = ""
         attempts_left = MAX_INVALID_INPUTS
