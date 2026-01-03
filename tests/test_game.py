@@ -1,7 +1,7 @@
 import re
 import pytest
 from unittest.mock import mock_open, patch
-from countrygame.constants import NUMBER_OF_NEW_LINES, MoveResult, PlayerStatus, MAX_INVALID_INPUTS
+from countrygame.constants import NUMBER_OF_NEW_LINES, MoveResult, PlayerStatus, MAX_INVALID_INPUTS, WELCOME_RULES
 from countrygame.game import CountryChainGame
 
 
@@ -136,8 +136,8 @@ def test_player_move_restart(setup_game, mocker):
     game, mock_print = setup_game
 
     mocker.patch("builtins.input", side_effect=["restart"])
-    result = game._get_player_move("o", MAX_INVALID_INPUTS)
 
+    result = game._get_player_move("n", MAX_INVALID_INPUTS)
     mock_print.assert_any_call("🔄 Game restarted!")
     assert result == MoveResult(PlayerStatus.RESTART, None)
 

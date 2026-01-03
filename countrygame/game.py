@@ -3,7 +3,7 @@ from collections import defaultdict
 from pathlib import Path
 
 from countrygame.constants import (
-    FORBIDDEN_SEPARATORS, MoveResult, PlayerStatus, MAX_INVALID_INPUTS
+    FORBIDDEN_SEPARATORS, MoveResult, PlayerStatus, MAX_INVALID_INPUTS, WELCOME_RULES
 )
 from countrygame.utils import clear_console, get_path
 
@@ -172,42 +172,32 @@ class CountryChainGame:
         This just holds the game rules, it's separated to make the play function look less busy
         :return: Nothing
         """
-        print(
-            f""" Welcome to the Country Chain Game! 👋🏼
-            Rules:
-            - You go first. 
-            - To Quit, type: 'quit'.
-            - To Restart the game, type: 'restart'.
-            - Enter a country starting with the last letter of the previous country.
-            - You Lose if you:
-                - Repeat a country. 🔁
-                - Enter a country that starts with the wrong letter. ❌
-                - If there are no other countries left starting with a letter
-            - You get {MAX_INVALID_INPUTS} consecutive invalid inputs:
-                - Empty input. 🗑️
-                - An entry that is not a country. 🌎
-            - 🌟WIN: Computer automatically loses if there are no other countries left starting with a letter.
-            """
-        )
+        print(WELCOME_RULES)
 
         if self.invalid_countries:
             print(
                 f"The following invalid countries were not counted: {self.invalid_countries}"
             )
 
+    def _reset_game_state(self):
+        self._print_welcome_message()
+        return "", MAX_INVALID_INPUTS
+
     def play(self) -> None:
         """
         Main play function
         :return: Nothing
         """
-        self._print_welcome_message()
-        last_letter = ""
-        attempts_left = MAX_INVALID_INPUTS
+        last_letter, attempts_left = self._reset_game_state()
 
         while True:
             player_result = self._get_player_move(last_letter, attempts_left)
 
-            if player_result.status in (PlayerStatus.RESTART, PlayerStatus.QUIT, PlayerStatus.LOSE):
+            if player_result.status is PlayerStatus.RESTART:
+                last_letter, attempts_left = self._reset_game_state()
+                continue
+
+            if player_result.status in (PlayerStatus.QUIT, PlayerStatus.LOSE):
                 break
 
             computer_result = self._get_computer_move(player_result.last_letter)
