@@ -3,7 +3,7 @@ from enum import Enum
 
 FORBIDDEN_SEPARATORS = {",", "|", ";", "\t"}
 NUMBER_OF_NEW_LINES = 100
-MAX_EMPTY_INPUTS = 3
+MAX_INVALID_INPUTS = 3
 
 class PlayerStatus(Enum):
     WIN = 1
@@ -15,6 +15,6 @@ class PlayerStatus(Enum):
 
 
 @dataclass
-class ComputerMoveResult:
+class MoveResult:
     status: PlayerStatus
     last_letter: str | None

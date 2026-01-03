@@ -3,7 +3,7 @@ from collections import defaultdict
 from pathlib import Path
 
 from countrygame.constants import (
-    FORBIDDEN_SEPARATORS, ComputerMoveResult, PlayerStatus, MAX_EMPTY_INPUTS
+    FORBIDDEN_SEPARATORS, MoveResult, PlayerStatus, MAX_INVALID_INPUTS
 )
 from countrygame.utils import clear_console, get_path
 
@@ -14,115 +14,176 @@ class CountryChainGame:
         self, countries_file_path_str="data/countries.txt", clear_fn=clear_console
     ):
         self.clear_console = clear_fn
-        self.unseen_countries = defaultdict(
-            set
-        )  # unseen_countries tracks remaining playable countries
+        self.unseen_countries = defaultdict(set)  # unseen_countries tracks remaining playable countries
         self.all_countries = set()
-        self.invalid_countries = (
-            set()
-        )  # to show what countries were not added to all_countries from the file
+        self.invalid_countries = set()  # to show what countries were not added to all_countries from the file
         self._load_all_countries(get_path(countries_file_path_str))
+        if not self.all_countries:
+            raise ValueError("🪦 No valid countries found in the file. 😢")
+
 
     # HELPERS
 
+    def _get_input_country(self, line: str) -> None | str:
+        """
+        Filters what is read from the file with all countries.
+        It skips empty lines and lines with forbidden separators.
+
+        :param line: line read from the countries.txt file
+        :return: valid country
+        """
+        country = line.strip()
+
+        # Skip empty lines
+        if not country:
+            return None
+        # Skip lines with forbidden separators
+        if any(sep in country for sep in FORBIDDEN_SEPARATORS):
+            self.invalid_countries.add(country)
+            return None
+
+        return country.lower()
+
     def _load_all_countries(self, countries_file_path: Path) -> None:
+        """
+        Initializes all countries
+        :param countries_file_path: file containing all countries
+        :return: Nothing
+        """
         try:
             with open(countries_file_path, "r") as f:
                 for line in f:
-                    country = line.strip()
-                    # Skip empty lines
-                    if not country:
+                    country = self._get_input_country(line)
+                    if country is None:
                         continue
-                    # Skip lines with forbidden separators
-                    if any(sep in country for sep in FORBIDDEN_SEPARATORS):
-                        self.invalid_countries.add(country)
-                        continue
-                    # Normalize
-                    country = country.lower()
                     self.all_countries.add(country)
                     self.unseen_countries[country[0]].add(country)
 
-            if not self.all_countries:
-                raise ValueError("No valid countries found in the file")
-
         except FileNotFoundError:
-            raise FileNotFoundError(
-                f"The file '{countries_file_path}' was not found."
-            )  # game cannot start without this
+            raise FileNotFoundError(f"The file '{countries_file_path}' was not found.")
 
     def _is_valid_country(self, country: str) -> bool:
+        """
+        Checks if the input country is in the master list of countries
+        :param country: country name input by the player
+        :return: True if the country is valid and False if it is not a valid country
+        """
         return country in self.all_countries
 
     def _reset_all(self) -> None:
+        """
+        Re-initializes all countries from the master list of countries
+        :return: Nothing
+        """
         self.unseen_countries = defaultdict(set)
         for country in self.all_countries:
             self.unseen_countries[country[0]].add(country)
 
-    # PRINTING HELPERS
+    # GAME
 
-    def _get_player_input(self) -> str | None:
-        empty_attempts = MAX_EMPTY_INPUTS
-        while empty_attempts != 0:
-            player_input = input("> 🧑‍🎤Input country: ").strip().lower()
+    def _get_player_move(self, last_letter: str, attempts_left: int) -> MoveResult:
+        """
+        Get the player's move and decide the state.
+        Handles MAX_EMPTY_INPUTS + invalid country retries.
+
+        Returns:
+            MoveResult(status, last_letter)
+        """
+
+        if len(last_letter) > 1:
+            raise ValueError("The last character cannot be more than 1 character long")
+
+        # No more countries that start with this last_letter
+        # No need to prompt user input
+        if last_letter and not self.unseen_countries[last_letter]:
+            print(f"🪦 Sorry you're out of luck! No more countries start with the letter {last_letter} 😢")
+            return MoveResult(PlayerStatus.LOSE, None)
+
+        while attempts_left > 0:
+            player_input = input("> 🧑‍🎤 Input country: ").strip().lower()
+
+            # Quit
+            if player_input == "quit":
+                print("🪦 Bye! Game ended.")
+                return MoveResult(PlayerStatus.QUIT, None)
+
+            # Restart
+            if player_input == "restart":
+                self._reset_all()
+                clear_console()
+                print("🔄 Game restarted!")
+                return MoveResult(PlayerStatus.RESTART, None)
+
+            # Empty input
             if not player_input:
-                print("Input cannot be empty. 🗑️")
-                empty_attempts -= 1
-            else:
-                return player_input
+                attempts_left -= 1
+                print(f"🗑️ Input cannot be empty. 💀You have {attempts_left} tries left.")
+                continue
 
-        print("🪦 Max empty inputs - 3 reached 😢")
-        return None
+            # Invalid country
+            if player_input not in self.all_countries:
+                attempts_left -= 1
+                print(f"⚠️ Invalid country! 💀You have {attempts_left} tries left.")
+                continue
 
-    def _handle_player_move(
-        self, player_input: str, computer_last_letter: str
-    ) -> PlayerStatus:
-        status = self.get_player_status(player_input, computer_last_letter)
+            # Wrong first letter
+            if last_letter and player_input[0] != last_letter:
+                print("❌ Wrong starting letter! You lose! 😢")
+                return MoveResult(PlayerStatus.LOSE, None)
 
-        if status == PlayerStatus.LOSE:
-            print(
-                "❌This country was already said or it has the wrong first letter. You Lose! 😢"
-            )
-        elif status == PlayerStatus.RETRY:
-            print("⚠️Invalid country, please try again! 🙃")
-        elif status == PlayerStatus.QUIT:
-            print("🪦 Bye! Game ended.")
-        else:
-            last_letter = player_input[-1].lower()
-            print(f"✅ Accepted! Last letter is {last_letter}")
+            # Already used
+            if player_input not in self.unseen_countries[player_input[0]]:
+                print("❌ Country already used! You lose! 😢")
+                return MoveResult(PlayerStatus.LOSE, None)
 
-        return status
+            # Valid move
+            self.unseen_countries[player_input[0]].remove(player_input)
+            print(f"✅ Accepted! Last letter is {player_input[-1]}")
+            return MoveResult(PlayerStatus.CONTINUE, player_input[-1])
 
-    def _handle_computer_move(self, player_input: str) -> ComputerMoveResult:
-        if not player_input:
-            print("Cannot respond to empty player response")
-            return ComputerMoveResult(PlayerStatus.RETRY, None)
+        print("🪦 Max invalid attempts reached 😢")
+        return MoveResult(PlayerStatus.LOSE, None)
 
-        computer_response = self.get_computer_response(player_input)
+    def _get_computer_move(self, last_player_letter: str) -> MoveResult:
+        """
+        Decide and perform the computer's move.
+        Returns a MoveResult(status, last_letter).
+        """
+        if not last_player_letter:
+            print("Cannot respond to empty player input")
+            return MoveResult(PlayerStatus.RETRY, None)
 
-        if not computer_response:
-            player_last_letter = player_input[-1].lower()
-            print(
-                f"No more countries that start with the letter: {player_last_letter} 😢. You win! 😃🎉"
-            )
-            return ComputerMoveResult(PlayerStatus.WIN, None)
-        else:
-            print(f"> 🤖Computer: {computer_response}")
-            return ComputerMoveResult(
-                PlayerStatus.CONTINUE, computer_response[-1].lower()
-            )
+        # Get possible countries starting with the last letter
+        available_countries = list(self.unseen_countries[last_player_letter])
+
+        if not available_countries:
+            print(f"No more countries that start with the letter '{last_player_letter}' 😢. You win! 😃🎉")
+            return MoveResult(PlayerStatus.WIN, None)
+
+        # Pick a random country
+        computer_choice = random.choice(available_countries)
+        self.unseen_countries[last_player_letter].remove(computer_choice)
+
+        print(f"> 🤖Computer: {computer_choice}")
+        return MoveResult(PlayerStatus.CONTINUE, computer_choice[-1].lower())
 
     def _print_welcome_message(self) -> None:
         print(
             f""" Welcome to the Country Chain Game! 👋🏼
             Rules:
-            - Enter a country starting with the last letter of the previous country.
-            - No repeats allowed. Repeating a country = you lose.
-            - Also responding with a country with the wrong first letter = you lose.
-            - To Quit, type: 'quit'
-            - To Restart the game, type: 'restart'
             - You go first. 
-            - Please note that the game quits after {MAX_EMPTY_INPUTS} empty inputs
-                """
+            - To Quit, type: 'quit'.
+            - To Restart the game, type: 'restart'.
+            - Enter a country starting with the last letter of the previous country.
+            - You Lose if you:
+                - Repeat a country. 🔁
+                - Enter a country that starts with the wrong letter. ❌
+                - If there are no other countries left starting with a letter
+            - You get {MAX_INVALID_INPUTS} continuous invalid inputs:
+                - Empty input. 🗑️
+                - An entry that is not a country. 🌎
+            - 🌟WIN: Computer automatically loses if there are no other countries left starting with a letter.
+            """
         )
 
         if self.invalid_countries:
@@ -130,86 +191,24 @@ class CountryChainGame:
                 f"The following invalid countries were not counted: {self.invalid_countries}"
             )
 
-    # CORE
-
-    def get_player_status(
-        self, player_input: str, computer_last_letter: str
-    ) -> PlayerStatus:
-        if not player_input:
-            return PlayerStatus.QUIT
-
-        if player_input == "quit":
-            return PlayerStatus.QUIT
-
-        elif player_input == "restart":
-            return PlayerStatus.RESTART
-
-        # Checking if the input is a country name
-        country = player_input.lower().strip()
-
-        if not self._is_valid_country(country):
-            return PlayerStatus.RETRY
-
-        first_letter = country[0]
-        computer_last_letter = computer_last_letter.strip()
-
-        # after the first round in the game
-        if len(computer_last_letter) != 0 and first_letter != computer_last_letter:
-            return PlayerStatus.LOSE
-
-        if country not in self.unseen_countries[first_letter]:
-            return PlayerStatus.LOSE
-
-        # Remove the country from unseen as the country is now seen
-        self.unseen_countries[first_letter].remove(country)
-
-        return PlayerStatus.CONTINUE
-
-    def get_computer_response(self, country: str) -> str | None:
-        if not country:
-            return None
-
-        last_letter = country[-1].lower()
-
-        if not self.unseen_countries[last_letter]:
-            return None
-
-        ret_country = random.choice(
-            list(self.unseen_countries[last_letter])
-        )  # less deterministic than using pop
-        self.unseen_countries[last_letter].remove(ret_country)
-
-        return ret_country
-
-    def run_game(self) -> PlayerStatus | None:
-        self._print_welcome_message()
-        computer_last_letter = ""
-
-        while True:
-            player_input = self._get_player_input()
-
-            if player_input == "restart":
-                self._reset_all()
-                clear_console()
-                print("🔄 Game restarted!\n")
-                return PlayerStatus.RESTART
-
-            status = self._handle_player_move(player_input, computer_last_letter)
-            if status == PlayerStatus.LOSE or status == PlayerStatus.QUIT:
-                return status
-
-            elif status == PlayerStatus.RETRY:
-                continue
-
-            computer_response = self._handle_computer_move(player_input)
-            computer_last_letter = computer_response.last_letter
-            if computer_last_letter is None:
-                return computer_response.status
-
     def play(self) -> None:
+        self._print_welcome_message()
+        last_letter = ""
+        attempts_left = MAX_INVALID_INPUTS
+
         while True:
-            if self.run_game() != PlayerStatus.RESTART:
+            player_result = self._get_player_move(last_letter, attempts_left)
+
+            if player_result.status in (PlayerStatus.RESTART, PlayerStatus.QUIT, PlayerStatus.LOSE):
                 break
+
+            computer_result = self._get_computer_move(player_result.last_letter)
+
+            if computer_result.status in (PlayerStatus.WIN, PlayerStatus.LOSE):
+                break
+
+            last_letter = computer_result.last_letter
+            continue
 
 
 if __name__ == "__main__":
