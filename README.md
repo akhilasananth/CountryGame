@@ -7,5 +7,6 @@ This game runs on the CLI
 - The computer responds with a valid unused country. 
 - The computer only loses when all the countries for that letter is mentioned and it is the computer's turn.
 - So, basically the game continues until someone can't move.
-  
-https://github.com/akhilasananth/CountryGame/blob/main/demo.mov 
+
+https://github.com/user-attachments/assets/1401b60a-8351-4ff5-90b7-90392ae57c95
+
